@@ -1,6 +1,27 @@
+/* ============================================================
+   SPENDLY — STYLESHEET
+   1. Design tokens
+   2. Base / reset
+   3. Layout
+   4. Cards
+   5. Buttons
+   6. Balance card
+   7. Daily limit
+   8. Insights
+   9. Expense list
+   10. Saving goals
+   11. Monthly summary
+   12. Empty states
+   13. Modal + forms
+   14. Toast
+   15. Responsive (tablet & desktop)
+   ============================================================ */
+
+
 /* ---------- 1. Design tokens ---------- */
 
 :root {
+    /* colour */
     --ink:          #16202e;
     --ink-soft:     #2a3648;
     --text:         #1d2635;
@@ -18,6 +39,7 @@
     --warn:         #9a6414;
     --warn-tint:    #fdf1de;
 
+    /* spacing scale */
     --space-1: 4px;
     --space-2: 8px;
     --space-3: 12px;
@@ -26,10 +48,12 @@
     --space-6: 24px;
     --space-7: 32px;
 
+    /* radius */
     --radius-sm: 8px;
     --radius:    12px;
     --radius-lg: 18px;
 
+    /* other */
     --shadow: 0 1px 2px rgba(22, 32, 46, 0.05),
               0 8px 24px rgba(22, 32, 46, 0.05);
     --font: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -62,7 +86,7 @@ h2 {
     font-size: 1rem;
 }
 
-
+/* Money figures line up better with tabular numbers */
 .balance-value,
 .summary-grid dd,
 .balance-meta dd,
@@ -71,7 +95,7 @@ h2 {
     font-variant-numeric: tabular-nums;
 }
 
-
+/* One visible focus style for the whole app */
 :focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
@@ -581,7 +605,7 @@ h2 {
     z-index: 50;
     background: rgba(22, 32, 46, 0.5);
     display: flex;
-    align-items: flex-end;      
+    align-items: flex-end;      /* bottom sheet on mobile */
     justify-content: center;
 }
 
@@ -639,7 +663,7 @@ h2 {
     border-radius: var(--radius-sm);
     background: var(--surface);
     font-family: inherit;
-    font-size: 1rem;      
+    font-size: 1rem;      /* 16px stops iOS from zooming in */
     color: var(--text);
 }
 
@@ -702,6 +726,7 @@ h2 {
 
 /* ---------- 15. Responsive ---------- */
 
+/* Tablet: roomier padding, centred modal */
 @media (min-width: 600px) {
 
     .app {
@@ -731,7 +756,7 @@ h2 {
     }
 }
 
-
+/* Desktop: two columns for the secondary cards */
 @media (min-width: 900px) {
 
     .app {

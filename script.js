@@ -1,3 +1,19 @@
+/* ============================================================
+   SPENDLY
+   1. State
+   2. Small helpers (money, date, text)
+   3. Elements
+   4. Calculations
+   5. Rendering
+   6. Modal system
+   7. Actions (what each modal does on submit)
+   8. Toast
+   9. Event listeners
+   10. Start
+   ============================================================ */
+
+"use strict";
+
 
 /* ---------- 1. State ---------- */
 
@@ -13,6 +29,10 @@ const state = {
     goals: []
 };
 
+/* A counter is safer than Date.now(): two items created in the
+   same millisecond would otherwise share the same id. This counter
+   is saved to localStorage too, so ids stay unique across reloads. */
+let lastId = 0;
 
 function createId() {
     const used = new Set([...state.income, ...state.expenses, ...state.goals].map(item => item.id));
@@ -22,6 +42,7 @@ function createId() {
     return next;
 }
 
+/* ---------- 1b. Persistence and data integrity ---------- */
 
 const STORAGE_KEY = "spendly:data";
 const SCHEMA_VERSION = 1;
@@ -39,6 +60,7 @@ let mutationPending = false;
 let loadedRaw = null;
 let revision = 0;
 let cleanSnapshot = "";
+let needsMigration = false;
 const EMPTY_STATE = JSON.stringify(state);
 const WRITE_LOCK = "spendly:state-write";
 
@@ -47,6 +69,7 @@ function stateSnapshot() {
 }
 
 function hasLocalChanges() {
+    // An open form is local work even before it changes the financial state.
     return saveFailed || savePending || mutationPending || actionInProgress
         || activeModal !== null || stateSnapshot() !== cleanSnapshot;
 }
@@ -63,6 +86,7 @@ function markSyncConflict() {
 function handleStorageChange(event) {
     if (event.storageArea !== localStorage || (event.key !== STORAGE_KEY && event.key !== null)) return;
     try {
+        // Events may be delayed; always read the latest value, not event.newValue.
         const raw = localStorage.getItem(STORAGE_KEY);
         if (raw === loadedRaw) return;
         if (syncConflict || hasLocalChanges()) {
@@ -70,7 +94,7 @@ function handleStorageChange(event) {
             return;
         }
         loadState(raw);
-        render();
+        render(); // Reading another tab's save must never write it back.
     } catch (error) {
         markSyncConflict();
     }
@@ -78,6 +102,7 @@ function handleStorageChange(event) {
 
 function discardLocalChanges() {
     if (savePending || mutationPending) return;
+    // loadState validates first. A corrupt incoming save cannot discard local data.
     if (!loadState()) {
         render();
         return;
@@ -156,6 +181,7 @@ function validateState(candidate) {
     }
 }
 
+/* Keep the exact source before migration/recovery. Never overwrite a backup. */
 function backupRaw(raw) {
     if (raw === null) return;
     const prefix = STORAGE_KEY + ":backup:" + Date.now() + ":" + crypto.randomUUID();
@@ -167,6 +193,7 @@ function backupRaw(raw) {
 }
 
 async function saveState() {
+    // Invalid state rejects before writing, so the action wrapper can roll back.
     if (recoveryRequired || actionInProgress || syncConflict || savePending) return false;
     validateState(state);
     savePending = true;
@@ -185,6 +212,7 @@ async function saveState() {
             loadedRaw = raw;
             revision = nextRevision;
             cleanSnapshot = stateSnapshot();
+            needsMigration = false;
             saveFailed = false;
             renderSaveNotice();
             return true;
@@ -217,6 +245,7 @@ function loadState(raw) {
     recoveryBackedUp = false;
     try {
         recoveryRaw = arguments.length ? raw : localStorage.getItem(STORAGE_KEY);
+        needsMigration = recoveryRaw === null;
         if (recoveryRaw === null) {
             Object.assign(state, JSON.parse(EMPTY_STATE));
             lastId = 0;
@@ -274,15 +303,21 @@ function loadState(raw) {
                 || adjustment !== 0n || (saved.totalIncome !== undefined && historicalIncome !== recordedIncome);
         }
         validateState(candidate);
+        if (arguments.length && loadedRaw !== null && saved.revision !== undefined
+            && saved.revision <= revision) {
+            markSyncConflict();
+            return false;
+        }
         candidate.totalIncome = Number(exactSum(candidate.income) + BigInt(candidate.legacyIncome));
         const recoveredCounter = isMoney(saved.lastId) ? Math.max(counter, saved.lastId) : counter;
-        if (legacy || repairedIds || recoveredCounter !== saved.lastId || saved.revision === undefined) {
+        needsMigration = legacy || repairedIds || recoveredCounter !== saved.lastId || saved.revision === undefined;
+        if (needsMigration) {
             backupRaw(recoveryRaw);
             recoveryBackedUp = true;
         }
         Object.assign(state, candidate);
         lastId = recoveredCounter;
-        revision = saved.revision === undefined ? 0 : saved.revision;
+        revision = Math.max(revision, saved.revision === undefined ? 0 : saved.revision);
         loadedRaw = recoveryRaw;
         cleanSnapshot = stateSnapshot();
         recoveryRequired = false;
@@ -291,6 +326,7 @@ function loadState(raw) {
         return true;
     } catch (error) {
         recoveryRequired = true;
+        // Retain the observed source for an explicitly confirmed recovery reset.
         loadedRaw = recoveryRaw;
         console.warn("Spendly: saved data needs recovery; original data will not be overwritten.", error);
         if (recoveryRaw !== null && !recoveryBackedUp) {
@@ -302,6 +338,7 @@ function loadState(raw) {
     }
 }
 
+/* Actions mutate in memory, then validate before any rendering or persistence. */
 async function runStateAction(action) {
     if (savePending || mutationPending) return false;
     if (syncConflict) {
@@ -337,6 +374,8 @@ async function runStateAction(action) {
             const saved = await saveState();
             if (saved && pendingToast) showToast(pendingToast);
         }
+        // This result controls modal closure, not persistence success. Retained
+        // in-memory changes must not be submitted a second time after a failed save.
         return result;
     } catch (error) {
         Object.assign(state, JSON.parse(snapshot));
@@ -354,10 +393,12 @@ async function runStateAction(action) {
 
 /* ---------- 2. Small helpers ---------- */
 
+/* Number -> "Rp 25.000" */
 function formatRupiah(number) {
     return "Rp " + number.toLocaleString("id-ID");
 }
 
+/* "Rp 25.000" -> 25000 */
 function parseRupiah(text) {
     const value = String(text).trim().replace(/^Rp\s*/, "");
     if (!/^(?:\d+|\d{1,3}(?:\.\d{3})+)$/.test(value)) return NaN;
@@ -365,8 +406,10 @@ function parseRupiah(text) {
     return isMoney(amount) ? amount : NaN;
 }
 
+/* Keep invalid input visible for correction instead of silently changing its meaning. */
 function formatWhileTyping(text, inputType = "", data = null) {
     if (!String(text).trim()) return "";
+    // Separators shift during single-key edits of an already formatted amount.
     const editingDigits = (inputType === "insertText" && /^\d$/.test(data || ""))
         || inputType === "deleteContentBackward" || inputType === "deleteContentForward";
     const value = String(text).trim().replace(/^Rp\s*/, "");
@@ -383,7 +426,8 @@ function formatDate(date) {
     });
 }
 
-
+/* Names typed by the user end up inside innerHTML, so characters
+   like < and > must be neutralised first. */
 function escapeHtml(text) {
     return String(text)
         .replace(/&/g, "&amp;")
@@ -392,6 +436,13 @@ function escapeHtml(text) {
         .replace(/"/g, "&quot;");
 }
 
+/* Expense dates are stored either as a plain "YYYY-MM-DD" string (new
+   data, from the date picker) or as a full ISO timestamp (old data,
+   from before Stage 2). Handing "YYYY-MM-DD" straight to `new Date()`
+   parses it as UTC midnight, which silently shifts to the previous
+   day for anyone west of UTC. parseDateValue always resolves to a
+   LOCAL calendar date, so day/month comparisons are correct no
+   matter which format the value came from. */
 function parseDateValue(value) {
     if (typeof value === "string") {
         const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
@@ -404,6 +455,7 @@ function parseDateValue(value) {
     return new Date(value);
 }
 
+/* Date -> "YYYY-MM-DD", for <input type="date"> values and storage */
 function toDateInputValue(value) {
     const date = parseDateValue(value);
     const year = date.getFullYear();
@@ -429,6 +481,7 @@ function isSameMonth(dateA, dateB) {
         && a.getFullYear() === b.getFullYear();
 }
 
+/* "YYYY-MM-DD" of an expense's date, used by the month filter */
 function monthKeyOf(value) {
     const date = parseDateValue(value);
     return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0");
@@ -540,6 +593,9 @@ function getMonthExpenses() {
     });
 }
 
+/* Search + filter + sort are pure: each takes a list and returns a
+   new list, so the original state.expenses array (and localStorage)
+   is never touched just because the user typed in the search box. */
 
 function searchExpenses(list, query) {
     const q = query.trim().toLowerCase();
@@ -605,6 +661,9 @@ function sortExpenses(list, sortBy) {
     return copy;
 }
 
+/* What should actually be drawn on screen right now, after search,
+   filters and sorting are applied. state.expenses itself never
+   changes because of this. */
 function getVisibleExpenses() {
     let list = state.expenses.slice();
 
@@ -624,6 +683,8 @@ function getMonthIncome() {
     });
 }
 
+/* Search + filter + sort are pure here too: they never touch
+   state.income or localStorage just because the user is typing. */
 
 function searchIncome(list, query) {
     const q = query.trim().toLowerCase();
@@ -689,7 +750,9 @@ function sortIncome(list, sortBy) {
     return copy;
 }
 
-
+/* What should actually be drawn on screen right now, after search,
+   filters and sorting are applied. state.income itself never
+   changes because of this. */
 function getVisibleIncome() {
     let list = state.income.slice();
 
@@ -721,6 +784,9 @@ function findGoal(id) {
 
 
 /* ---------- 5. Rendering ---------- */
+
+/* One entry point. Every action just calls render() instead of
+   remembering which four update functions it needs. */
 function render() {
     if (actionInProgress) return;
     const notice = $("data-integrity-notice");
@@ -728,6 +794,7 @@ function render() {
     notice.textContent = recoveryRequired
         ? "Saved data needs recovery. Original data is retained and changes are blocked. Restore a valid save, or use Reset data to start over after a backup is secured."
         : "Legacy history is incomplete. Historical income and the saved balance are preserved separately; monthly totals include recorded transactions only.";
+    /* Undated legacy income stays separate from recorded transactions. */
     state.totalIncome = Number(exactSum(state.income) + BigInt(state.legacyIncome));
 
     renderBalance();
@@ -779,6 +846,8 @@ function renderDailyLimit() {
 }
 
 function renderIncome() {
+    /* Same reasoning as the expense count badge: always the true
+       total, regardless of active filters. */
     ui.incomeCount.textContent = state.income.length;
 
     if (state.income.length === 0) {
@@ -829,6 +898,8 @@ function renderIncome() {
 }
 
 function renderExpenses() {
+    /* The badge always shows the true total, regardless of active
+       filters, so it still answers "how many expenses do I have". */
     ui.expenseCount.textContent = state.expenses.length;
 
     if (state.expenses.length === 0) {
@@ -978,7 +1049,11 @@ function renderSummary() {
 }
 
 
-/* ---------- 6. Modal system ---------- */
+/* ---------- 6. Modal system ----------
+
+   Every modal shares the same markup. This object describes what
+   changes between them, so openModal() stays short and adding a
+   new modal means adding one entry here.                        */
 
 const MODALS = {
     addIncome: {
@@ -1150,13 +1225,13 @@ const MODALS = {
     }
 };
 
-let activeModal = null;      
-let modalContext = null;     
-let lastFocused = null;      
-let queuedModal = null;      
+let activeModal = null;      /* name of the modal currently open */
+let modalContext = null;     /* extra data, e.g. which goal or expense */
+let lastFocused = null;      /* element to focus again after closing */
+let queuedModal = null;      /* modal to open right after this one closes */
 
 function openModal(name, context) {
-    if (savePending || mutationPending) return;
+    if (savePending || mutationPending || syncConflict) return;
     const config = MODALS[name];
 
     activeModal = name;
@@ -1170,6 +1245,7 @@ function openModal(name, context) {
 
     ui.confirmButton.className = "btn " + (config.confirmStyle || "btn-accent");
 
+    /* Show only this modal's fields, and clear them */
     document.querySelectorAll(".form-panel").forEach(function (panel) {
         panel.hidden = panel.id !== config.panel;
     });
@@ -1185,15 +1261,41 @@ function openModal(name, context) {
     $(config.focus).focus();
 }
 
+function restoreModalFocus(name, context) {
+    const targets = {
+        editIncome: ["data-edit-income", "income-search"],
+        deleteIncome: ["data-delete-income", "income-search"],
+        editExpense: ["data-edit-expense", "expense-search"],
+        deleteExpense: ["data-delete-expense", "expense-search"],
+        withdrawSavings: ["data-withdraw-savings", null],
+        addSavings: ["data-add-savings", null]
+    };
+    const target = targets[name];
+    const candidates = [lastFocused];
+    if (target) {
+        const [attribute, fallbackId] = target;
+        if (Number.isSafeInteger(context)) {
+            candidates.push(document.querySelector(`[${attribute}="${context}"]`));
+        }
+        // A deleted row has no replacement. Stay in its list if possible.
+        candidates.push(document.querySelector(`[${attribute}]`));
+        candidates.push(fallbackId ? $(fallbackId) : document.querySelector('[data-modal="addGoal"]'));
+    }
+    for (const element of candidates) {
+        if (element && element.isConnected && !element.disabled && element.getClientRects().length) {
+            element.focus();
+            return;
+        }
+    }
+}
+
 function closeModal() {
     ui.overlay.hidden = true;
+    restoreModalFocus(activeModal, modalContext);
     activeModal = null;
     modalContext = null;
 
-    if (lastFocused) {
-        lastFocused.focus();
-    }
-
+    /* Used by the expense -> reason flow */
     if (queuedModal) {
         const next = queuedModal;
         queuedModal = null;
@@ -1222,7 +1324,10 @@ function hideError() {
 }
 
 
-/* ---------- 7. Actions ---------- */
+/* ---------- 7. Actions ----------
+
+   Each function returns true when the modal should close, and
+   false when something is wrong and the user should try again.  */
 
 function submitAddIncome() {
     const name = $("income-name").value.trim();
@@ -1279,6 +1384,10 @@ function submitEditIncome() {
         return false;
     }
 
+    /* Only the DIFFERENCE between the old and new amount should move
+       in or out of the balance — not the full new amount. Unlike an
+       expense, a bigger income is good news (balance goes up); a
+       smaller one takes money back out. */
     const delta = amount - income.amount;
 
     if (delta < 0 && Math.abs(delta) > state.balance) {
@@ -1364,6 +1473,9 @@ function submitAddExpense() {
     render();
     showToast(formatRupiah(amount) + " recorded.");
 
+    /* Ask for a reason only when this expense is dated today AND it
+       pushes today's spending over the limit. A backdated expense
+       shouldn't trigger a prompt about "today". */
     const isToday = isSameDay(dateValue, new Date());
 
     if (isToday && state.dailyLimit && sumAmount(getTodayExpenses()) > state.dailyLimit) {
@@ -1396,7 +1508,8 @@ function submitEditExpense() {
         return false;
     }
 
-
+    /* Only the DIFFERENCE between the old and new amount should move
+       in or out of the balance — not the full new amount. */
     const delta = amount - expense.amount;
 
     if (delta > state.balance) {
@@ -1566,6 +1679,8 @@ function submitResetData() {
 }
 
 
+/* ---------- 8. Toast ---------- */
+
 let toastTimer = null;
 
 function showToast(message) {
@@ -1582,6 +1697,8 @@ function showToast(message) {
 
 
 /* ---------- 9. Event listeners ---------- */
+
+/* Any button with data-modal opens that modal */
 $("retry-save").addEventListener("click", retrySave);
 $("discard-local-changes").addEventListener("click", discardLocalChanges);
 window.addEventListener("storage", handleStorageChange);
@@ -1592,6 +1709,7 @@ document.querySelectorAll("[data-modal]").forEach(function (button) {
     });
 });
 
+/* One submit handler for every modal */
 ui.modalForm.addEventListener("submit", async function (event) {
     event.preventDefault();
     hideError();
@@ -1606,12 +1724,14 @@ ui.modalForm.addEventListener("submit", async function (event) {
 ui.cancelButton.addEventListener("click", cancelModal);
 ui.closeButton.addEventListener("click", cancelModal);
 
+/* Click on the dark area closes the modal */
 ui.overlay.addEventListener("click", function (event) {
     if (event.target === ui.overlay) {
         cancelModal();
     }
 });
 
+/* Escape closes, Tab stays inside the modal */
 document.addEventListener("keydown", function (event) {
     if (ui.overlay.hidden) {
         return;
@@ -1652,6 +1772,7 @@ function keepFocusInsideModal(event) {
     }
 }
 
+/* Enter moves to the next field when the input declares data-next */
 ui.modalForm.addEventListener("keydown", function (event) {
     if (event.key !== "Enter") {
         return;
@@ -1665,12 +1786,14 @@ ui.modalForm.addEventListener("keydown", function (event) {
     }
 });
 
+/* Live "Rp" formatting for every money input */
 document.querySelectorAll("[data-currency]").forEach(function (input) {
     input.addEventListener("input", function (event) {
         input.value = formatWhileTyping(input.value, event.inputType, event.data);
     });
 });
 
+/* Delegated clicks: delete an expense, add savings to a goal */
 document.addEventListener("click", function (event) {
     const deleteButton = event.target.closest("[data-delete-expense]");
 
@@ -1714,6 +1837,10 @@ document.addEventListener("click", function (event) {
 });
 
 
+/* Search/filter/sort only change what's displayed, not state itself,
+   so these call renderExpenses() directly instead of the full
+   render() — no reason to re-run every other render step or write
+   to localStorage just because someone typed in the search box. */
 ui.expenseSearch.addEventListener("input", renderExpenses);
 ui.expenseCategoryFilter.addEventListener("change", renderExpenses);
 ui.expenseMonthFilter.addEventListener("change", renderExpenses);
@@ -1746,8 +1873,8 @@ ui.clearIncomeFilters.addEventListener("click", function () {
 async function initializePersistence() {
     const loaded = loadState();
     render();
-    if (loaded && (loadedRaw === null || JSON.parse(loadedRaw).revision === undefined
-        || JSON.parse(loadedRaw).lastId !== lastId)) await saveState();
+    // Existing revisioned saves are read-only on startup, avoiding write loops.
+    if (loaded && needsMigration) await saveState();
 }
 
 const startup = initializePersistence();
