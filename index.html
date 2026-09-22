@@ -16,8 +16,18 @@
         <!-- ============ HEADER ============ -->
 
         <header class="app-header">
-            <p class="app-name">Spendly</p>
-            <p class="app-tagline">Track where your money goes.</p>
+            <div class="header-row">
+                <div>
+                    <p class="app-name">Spendly</p>
+                    <p class="app-tagline">Track where your money goes.</p>
+                </div>
+                <button class="btn btn-quiet btn-sm" data-modal="resetData">Reset data</button>
+            </div>
+            <p id="data-integrity-notice" role="alert" hidden></p>
+            <p id="sync-conflict-notice" role="alert" hidden>Another tab changed your Spendly data. Your local changes are still here, but saving is paused to protect the newer data. You can keep this page open to review your work, or discard local changes and load the latest saved data.</p>
+            <button type="button" class="btn btn-quiet btn-sm" id="discard-local-changes" hidden>Discard local changes and load latest</button>
+            <p id="save-failure-notice" role="alert" hidden>Spendly couldn't save your changes. They are still available in this open page, but may be lost if you refresh or close it. Keep this page open and try saving again.</p>
+            <button type="button" class="btn btn-quiet btn-sm" id="retry-save" hidden>Retry save</button>
         </header>
 
 
@@ -43,9 +53,51 @@
                 </dl>
 
                 <div class="button-row">
-                    <button class="btn btn-light" data-modal="addMoney">Add money</button>
+                    <button class="btn btn-light" data-modal="addIncome">Add income</button>
                     <button class="btn btn-accent" data-modal="addExpense">Add expense</button>
                 </div>
+
+            </section>
+
+
+            <!-- ============ INCOME ============ -->
+
+            <section class="card area-income" aria-labelledby="income-heading">
+
+                <div class="card-head">
+                    <h2 id="income-heading">Income</h2>
+                    <span class="count" id="income-count">0</span>
+                </div>
+
+                <div class="expense-controls">
+                    <input type="search" id="income-search" class="expense-search"
+                           placeholder="Search by source or category…" autocomplete="off"
+                           aria-label="Search income">
+
+                    <div class="expense-controls-row">
+                        <select id="income-category-filter" aria-label="Filter income by category">
+                            <option value="all">All categories</option>
+                            <option value="Allowance">Allowance</option>
+                            <option value="Part-time">Part-time</option>
+                            <option value="Freelance">Freelance</option>
+                            <option value="Gift">Gift</option>
+                            <option value="Other">Other</option>
+                        </select>
+
+                        <input type="month" id="income-month-filter" aria-label="Filter income by month">
+
+                        <select id="income-sort" aria-label="Sort income">
+                            <option value="newest">Newest first</option>
+                            <option value="oldest">Oldest first</option>
+                            <option value="highest">Highest amount</option>
+                            <option value="lowest">Lowest amount</option>
+                        </select>
+
+                        <button type="button" class="btn btn-quiet btn-sm" id="clear-income-filters">Clear</button>
+                    </div>
+                </div>
+
+                <ul class="expense-list" id="income-list"></ul>
 
             </section>
 
@@ -89,6 +141,34 @@
                 <div class="card-head">
                     <h2 id="expenses-heading">Expenses</h2>
                     <span class="count" id="expense-count">0</span>
+                </div>
+
+                <div class="expense-controls">
+                    <input type="search" id="expense-search" class="expense-search"
+                           placeholder="Search by name or reason…" autocomplete="off"
+                           aria-label="Search expenses">
+
+                    <div class="expense-controls-row">
+                        <select id="expense-category-filter" aria-label="Filter by category">
+                            <option value="all">All categories</option>
+                            <option value="Food">Food</option>
+                            <option value="Transport">Transport</option>
+                            <option value="Entertainment">Entertainment</option>
+                            <option value="Shopping">Shopping</option>
+                            <option value="Other">Other</option>
+                        </select>
+
+                        <input type="month" id="expense-month-filter" aria-label="Filter by month">
+
+                        <select id="expense-sort" aria-label="Sort expenses">
+                            <option value="newest">Newest first</option>
+                            <option value="oldest">Oldest first</option>
+                            <option value="highest">Highest amount</option>
+                            <option value="lowest">Lowest amount</option>
+                        </select>
+
+                        <button type="button" class="btn btn-quiet btn-sm" id="clear-expense-filters">Clear</button>
+                    </div>
                 </div>
 
                 <ul class="expense-list" id="expense-list"></ul>
@@ -161,13 +241,53 @@
 
             <form id="modal-form" novalidate>
 
-                <div class="form-panel" id="form-money" hidden>
-                    <label for="balance-amount">Amount</label>
-                    <input type="text" id="balance-amount" placeholder="Rp 0"
-                           inputmode="numeric" autocomplete="off" data-currency>
+                <!-- Add income -->
+                <div class="form-panel" id="form-income" hidden>
+                    <label for="income-name">Income source</label>
+                    <input type="text" id="income-name" placeholder="Part-time job"
+                           autocomplete="off" data-next="income-amount">
+
+                    <label for="income-amount">Amount</label>
+                    <input type="text" id="income-amount" placeholder="Rp 0"
+                           inputmode="numeric" autocomplete="off" data-currency data-next="income-category">
+
+                    <label for="income-category">Category</label>
+                    <select id="income-category">
+                        <option value="Allowance">Allowance</option>
+                        <option value="Part-time">Part-time</option>
+                        <option value="Freelance">Freelance</option>
+                        <option value="Gift">Gift</option>
+                        <option value="Other">Other</option>
+                    </select>
+
+                    <label for="income-date">Date</label>
+                    <input type="date" id="income-date">
                 </div>
 
+                <!-- Edit income -->
+                <div class="form-panel" id="form-edit-income" hidden>
+                    <label for="edit-income-name">Income source</label>
+                    <input type="text" id="edit-income-name" placeholder="Part-time job"
+                           autocomplete="off" data-next="edit-income-amount">
 
+                    <label for="edit-income-amount">Amount</label>
+                    <input type="text" id="edit-income-amount" placeholder="Rp 0"
+                           inputmode="numeric" autocomplete="off" data-currency>
+
+                    <label for="edit-income-category">Category</label>
+                    <select id="edit-income-category">
+                        <option value="Allowance">Allowance</option>
+                        <option value="Part-time">Part-time</option>
+                        <option value="Freelance">Freelance</option>
+                        <option value="Gift">Gift</option>
+                        <option value="Other">Other</option>
+                    </select>
+
+                    <label for="edit-income-date">Date</label>
+                    <input type="date" id="edit-income-date">
+                </div>
+
+                <!-- Add expense -->
                 <div class="form-panel" id="form-expense" hidden>
                     <label for="expense-name">What did you spend on?</label>
                     <input type="text" id="expense-name" placeholder="Lunch at campus"
@@ -185,15 +305,46 @@
                         <option value="Shopping">Shopping</option>
                         <option value="Other">Other</option>
                     </select>
+
+                    <label for="expense-date">Date</label>
+                    <input type="date" id="expense-date">
                 </div>
 
+                <!-- Edit expense -->
+                <div class="form-panel" id="form-edit-expense" hidden>
+                    <label for="edit-expense-name">What did you spend on?</label>
+                    <input type="text" id="edit-expense-name" placeholder="Lunch at campus"
+                           autocomplete="off" data-next="edit-expense-amount">
 
+                    <label for="edit-expense-amount">Amount</label>
+                    <input type="text" id="edit-expense-amount" placeholder="Rp 0"
+                           inputmode="numeric" autocomplete="off" data-currency>
+
+                    <label for="edit-expense-category">Category</label>
+                    <select id="edit-expense-category">
+                        <option value="Food">Food</option>
+                        <option value="Transport">Transport</option>
+                        <option value="Entertainment">Entertainment</option>
+                        <option value="Shopping">Shopping</option>
+                        <option value="Other">Other</option>
+                    </select>
+
+                    <label for="edit-expense-date">Date</label>
+                    <input type="date" id="edit-expense-date">
+
+                    <label for="edit-expense-reason">Reason (optional)</label>
+                    <input type="text" id="edit-expense-reason" placeholder="e.g. Had to buy a charger"
+                           autocomplete="off">
+                </div>
+
+                <!-- Daily limit -->
                 <div class="form-panel" id="form-limit" hidden>
                     <label for="limit-amount">Daily spending limit</label>
                     <input type="text" id="limit-amount" placeholder="Rp 0"
                            inputmode="numeric" autocomplete="off" data-currency>
                 </div>
 
+                <!-- Saving goal -->
                 <div class="form-panel" id="form-goal" hidden>
                     <label for="goal-name">Goal name</label>
                     <input type="text" id="goal-name" placeholder="Nintendo Switch 2"
@@ -204,21 +355,34 @@
                            inputmode="numeric" autocomplete="off" data-currency>
                 </div>
 
+                <!-- Add savings to a goal -->
                 <div class="form-panel" id="form-savings" hidden>
                     <label for="savings-amount">Amount to move into this goal</label>
                     <input type="text" id="savings-amount" placeholder="Rp 0"
                            inputmode="numeric" autocomplete="off" data-currency>
                 </div>
 
+                <!-- Withdraw savings from a goal -->
+                <div class="form-panel" id="form-withdrawal" hidden>
+                    <label for="withdrawal-amount">Amount to withdraw</label>
+                    <input type="text" id="withdrawal-amount" placeholder="Rp 0"
+                           inputmode="numeric" autocomplete="off" data-currency>
+                </div>
+
+                <!-- Reason (daily limit exceeded) -->
                 <div class="form-panel" id="form-reason" hidden>
                     <label for="reason-text">Why did you spend this?</label>
                     <input type="text" id="reason-text" placeholder="Had to buy a charger"
                            autocomplete="off">
                 </div>
 
+                <!-- Delete confirmation -->
                 <div class="form-panel" id="form-delete" hidden>
                     <p class="confirm-text" id="delete-text"></p>
                 </div>
+
+                <!-- Reset all data confirmation -->
+                <div class="form-panel" id="form-reset" hidden></div>
 
                 <p class="form-error" id="modal-error" role="alert" hidden></p>
 

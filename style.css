@@ -1,23 +1,4 @@
-/* 
-   SPENDLY STYLES
-   1. Tokens
-   2. Base
-   3. Layout
-   4. Cards
-   5. Buttons
-   6. Balance
-   7. Daily Limit
-   8. Insights
-   9. Expenses
-   10. Goals
-   11. Summary
-   12. Empty States
-   13. Modals
-   14. Toast
-   15. Responsive
-*/
-
-/* 1. Tokens */
+/* ---------- 1. Design tokens ---------- */
 
 :root {
     --ink:          #16202e;
@@ -45,7 +26,6 @@
     --space-6: 24px;
     --space-7: 32px;
 
-
     --radius-sm: 8px;
     --radius:    12px;
     --radius-lg: 18px;
@@ -56,7 +36,7 @@
 }
 
 
-/* 2. Base */
+/* ---------- 2. Base / reset ---------- */
 
 * {
     box-sizing: border-box;
@@ -91,6 +71,7 @@ h2 {
     font-variant-numeric: tabular-nums;
 }
 
+
 :focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
@@ -104,7 +85,7 @@ h2 {
 }
 
 
-/* 3. Layout */
+/* ---------- 3. Layout ---------- */
 
 .app {
     max-width: 640px;
@@ -128,13 +109,20 @@ h2 {
     color: var(--muted);
 }
 
+.header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-3);
+}
+
 .layout {
     display: grid;
     gap: var(--space-4);
 }
 
 
-/* 4. Cards */
+/* ---------- 4. Cards ---------- */
 
 .card {
     background: var(--surface);
@@ -165,7 +153,7 @@ h2 {
 }
 
 
-/* 5. Buttons */
+/* ---------- 5. Buttons ---------- */
 
 .btn {
     min-height: 44px;
@@ -228,7 +216,7 @@ h2 {
 }
 
 
-/* 6. Balance */
+/* ---------- 6. Balance card (hero) ---------- */
 
 .card-balance {
     background: var(--ink);
@@ -269,7 +257,7 @@ h2 {
 }
 
 
-/* 7. Daily Limit */
+/* ---------- 7. Daily limit ---------- */
 
 .limit-status {
     font-size: 1.125rem;
@@ -310,7 +298,7 @@ h2 {
 }
 
 
-/* 8. Insights */
+/* ---------- 8. Insights ---------- */
 
 .insight {
     display: flex;
@@ -337,7 +325,7 @@ h2 {
 }
 
 
-/* 9. Expenses */
+/* ---------- 9. Expense list ---------- */
 
 .expense-list {
     list-style: none;
@@ -424,8 +412,64 @@ h2 {
     color: var(--danger);
 }
 
+.edit-button:hover {
+    background: var(--accent-tint);
+    color: var(--accent-dark);
+}
 
-/* 10. Goals */
+
+/* ---------- 9b. Expense search / filter / sort ---------- */
+
+.expense-controls {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+}
+
+.expense-search {
+    width: 100%;
+    min-height: 44px;
+    padding: 0 var(--space-3);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    font-family: inherit;
+    font-size: 0.9375rem;
+    color: var(--text);
+}
+
+.expense-search:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-tint);
+}
+
+.expense-controls-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.expense-controls-row select,
+.expense-controls-row input[type="month"] {
+    flex: 1 1 120px;
+    min-height: 40px;
+    padding: 0 var(--space-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    font-family: inherit;
+    font-size: 0.8125rem;
+    color: var(--text);
+}
+
+.expense-controls-row .btn {
+    flex: 0 0 auto;
+}
+
+
+/* ---------- 10. Saving goals ---------- */
 
 .goal {
     padding: var(--space-4) 0;
@@ -478,7 +522,7 @@ h2 {
 }
 
 
-/* 11. Summary */
+/* ---------- 11. Monthly summary ---------- */
 
 .summary-grid {
     display: grid;
@@ -511,7 +555,7 @@ h2 {
 }
 
 
-/* 12. Empty States */
+/* ---------- 12. Empty states ---------- */
 
 .empty {
     padding: var(--space-6) var(--space-2);
@@ -529,7 +573,7 @@ h2 {
 }
 
 
-/* 13. Modals */
+/* ---------- 13. Modal + forms ---------- */
 
 .modal-overlay {
     position: fixed;
@@ -537,7 +581,7 @@ h2 {
     z-index: 50;
     background: rgba(22, 32, 46, 0.5);
     display: flex;
-    align-items: flex-end;     
+    align-items: flex-end;      
     justify-content: center;
 }
 
@@ -595,7 +639,7 @@ h2 {
     border-radius: var(--radius-sm);
     background: var(--surface);
     font-family: inherit;
-    font-size: 1rem;     
+    font-size: 1rem;      
     color: var(--text);
 }
 
@@ -633,7 +677,7 @@ h2 {
 }
 
 
-/* 14. Toast */
+/* ---------- 14. Toast ---------- */
 
 .toast {
     position: fixed;
@@ -656,9 +700,8 @@ h2 {
 }
 
 
-/* 15. Responsive */
+/* ---------- 15. Responsive ---------- */
 
-/* Tablet Layout */
 @media (min-width: 600px) {
 
     .app {
@@ -688,7 +731,7 @@ h2 {
     }
 }
 
-/* Desktop Layout */
+
 @media (min-width: 900px) {
 
     .app {
