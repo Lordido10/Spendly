@@ -776,3 +776,28 @@ h2 {
         gap: var(--space-4);
     }
 }
+
+/* Dashboard: read-only overview, using the existing card and meter styles. */
+.dashboard { grid-column: 1 / -1; min-width: 0; }
+.dashboard h1 { font-size: 1.5rem; }
+.dashboard h2 { font-size: 1rem; }
+.dashboard-note { color: var(--muted); font-size: .8125rem; margin: 8px 0 16px; }
+.dashboard-metrics, .dashboard-panels { display: grid; gap: var(--space-4); margin: var(--space-4) 0; }
+.dashboard-metrics dt { color: var(--muted); font-size: .8125rem; }
+.dashboard-metrics dd { font-size: 1.4rem; font-weight: 700; margin-top: 8px; overflow-wrap: anywhere; }
+.dashboard-metrics > div:first-child { background: var(--ink); color: white; }
+.dashboard-metrics > div:first-child dt { color: #d0d8e2; }
+.dashboard-panels > *, .dashboard-row > * { min-width: 0; }
+.dashboard-list { list-style: none; padding: 0; }
+.dashboard-list li { padding: 12px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.dashboard-list li:last-child { border-bottom: 0; }
+.dashboard-row { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: .875rem; }
+.dashboard-row .dashboard-note { margin: 4px 0 0; }
+.dashboard-list .meter-bar { margin-top: 8px; }
+.dashboard-income { color: var(--accent); }
+.dashboard-expense { color: var(--danger); }
+.dashboard-insight p { margin-top: 12px; line-height: 1.65; overflow-wrap: anywhere; }
+@media (min-width: 600px) {
+    .dashboard-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .dashboard-panels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

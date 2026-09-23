@@ -610,3 +610,70 @@ test('P2: monthly count label matches expense count without changing monetary to
     assert.equal(app.elements['summary-expenses'].textContent,'Rp 20');
     assert.equal(app.elements['summary-remaining'].textContent,'Rp 80');
 });
+
+test('dashboard: totals, monthly scope, goal progress and recent ordering are derived without mutations',async()=>{
+    const app=await boot();
+    app.run(`state.balance=75;state.legacyIncome=900;
+        state.income=[{id:1,name:'Old',amount:100,category:'Gift',date:'2020-01-01'},
+            {id:3,name:'New',amount:200,category:'Gift',date:todayISODate()}];
+        state.expenses=[{id:2,name:'Old meal',amount:20,category:'Food',date:'2020-01-02'},
+            {id:4,name:'Meal',amount:30,category:'Food',date:todayISODate()},
+            {id:5,name:'Bus',amount:10,category:'Transport',date:todayISODate()}];
+        state.goals=[{id:6,name:'One',target:100,saved:25},{id:7,name:'Two',target:300,saved:75}];`);
+    const before=app.state();const stored=app.storage.get(KEY);
+    assert.equal(app.run('getDashboardData().balance'),75);
+    assert.equal(app.run('getDashboardData().income'),300n);
+    assert.equal(app.run('getDashboardData().expenses'),60n);
+    assert.equal(app.run('getDashboardData().saved'),100n);
+    assert.equal(app.run('getDashboardData().target'),400n);
+    assert.equal(app.run('getDashboardData().progress'),25);
+    assert.equal(app.run('getDashboardData().monthlyIncome'),200);
+    assert.equal(app.run('getDashboardData().monthlyExpenses'),40);
+    assert.equal(app.run('getDashboardData().remaining'),160);
+    assert.equal(app.run('JSON.stringify(getDashboardData().categories)'),JSON.stringify([['Food',50],['Transport',10]]));
+    assert.equal(app.run('getDashboardData().recent.map(x=>x.id).join()'),'5,4,3,2,1');
+    app.run('renderDashboard()');
+    assert.deepEqual(app.state(),before);assert.equal(app.storage.get(KEY),stored);
+    assert.match(app.elements['dashboard-insight'].textContent,/highest expense is Meal/);
+});
+
+test('dashboard: empty states and exact combined targets beyond safe number range',async()=>{
+    const app=await boot();
+    assert.match(app.elements['dashboard-goals'].innerHTML,/No saving goals/);
+    assert.match(app.elements['dashboard-recent'].innerHTML,/No transactions/);
+    assert.match(app.elements['dashboard-categories'].innerHTML,/No expenses/);
+    assert.equal(app.run('getDashboardData().progress'),0);
+    app.run('state.goals=[{target:Number.MAX_SAFE_INTEGER,saved:1},{target:Number.MAX_SAFE_INTEGER,saved:1}];renderDashboard()');
+    assert.equal(app.run('getDashboardData().target'),18014398509481982n);
+    assert.match(app.elements['dashboard-goals'].innerHTML,/18\.014\.398\.509\.481\.982/);
+});
+
+test('dashboard: CRUD and reload refresh display from persisted transactions',async()=>{
+    let app=await boot();const date=app.run('todayISODate()');
+    app.form({'income-name':'Pay','income-amount':'100','income-category':'Gift','income-date':date});
+    await app.action('submitAddIncome');
+    assert.equal(app.elements['dashboard-income'].textContent,'Rp 100');
+    app.form({'expense-name':'Lunch','expense-amount':'20','expense-category':'Food','expense-date':date});
+    await app.action('submitAddExpense');
+    assert.equal(app.elements['dashboard-balance'].textContent,'Rp 80');
+    app.form({'edit-expense-name':'Lunch','edit-expense-amount':'30','edit-expense-category':'Food','edit-expense-reason':''});assert.equal(await app.action('submitEditExpense',2),true);
+    assert.equal(app.elements['dashboard-expenses'].textContent,'Rp 30');
+    app.form({'edit-income-name':'Pay','edit-income-amount':'200','edit-income-category':'Gift','edit-income-date':date});assert.equal(await app.action('submitEditIncome',1),true);
+    assert.equal(app.elements['dashboard-income'].textContent,'Rp 200');
+    app=await app.reload();
+    assert.equal(app.elements['dashboard-balance'].textContent,'Rp 170');
+    assert.equal(app.elements['dashboard-month-remaining'].textContent,app.elements['summary-remaining'].textContent);
+    await app.action('submitDeleteExpense',2);await app.action('submitDeleteIncome',1);
+    assert.equal(app.elements['dashboard-balance'].textContent,'Rp 0');
+    assert.match(app.elements['dashboard-recent'].innerHTML,/No transactions/);
+});
+
+test('dashboard: recent list is capped, escapes names and reports monthly overspending',async()=>{
+    const app=await boot();
+    app.run(`state.expenses=Array.from({length:7},(_,i)=>({id:i+1,name:'<img onerror=alert(1)>',amount:10,category:'Food',date:todayISODate()}));renderDashboard();`);
+    assert.equal(app.run('getDashboardData().recent.length'),5);
+    assert.equal(app.run('getDashboardData().recent[0].id'),7);
+    assert.doesNotMatch(app.elements['dashboard-recent'].innerHTML,/<img/);
+    assert.match(app.elements['dashboard-recent'].innerHTML,/&lt;img/);
+    assert.match(app.elements['dashboard-insight'].textContent,/exceed recorded income by Rp 70/);
+});

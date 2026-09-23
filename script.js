@@ -804,7 +804,66 @@ function render() {
     renderInsights();
     renderGoals();
     renderSummary();
+    renderDashboard();
     renderSaveNotice();
+}
+
+// Derived display data only: no dashboard values are written to storage.
+function getDashboardData() {
+    const monthlyIncome = sumAmount(getMonthIncome());
+    const monthlyExpenses = sumAmount(getMonthExpenses());
+    const categories = Object.entries(totalsByCategory(state.expenses))
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    const saved = exactSum(state.goals, "saved");
+    const target = exactSum(state.goals, "target");
+    return {
+        balance: state.balance,
+        income: exactSum(state.income),
+        expenses: exactSum(state.expenses),
+        saved, target,
+        progress: target ? Math.min(100, Number(saved * 100n / target)) : 0,
+        monthlyIncome, monthlyExpenses, remaining: monthlyIncome - monthlyExpenses,
+        categories,
+        highestExpense: state.expenses.reduce((top, item) => !top || item.amount > top.amount ? item : top, null),
+        recent: [...state.income.map(item => ({ ...item, type: "Income" })),
+            ...state.expenses.map(item => ({ ...item, type: "Expense" }))]
+            .sort((a, b) => parseDateValue(b.date) - parseDateValue(a.date) || b.id - a.id).slice(0, 5)
+    };
+}
+
+function renderDashboard() {
+    const data = getDashboardData();
+    $("dashboard-balance").textContent = formatRupiah(data.balance);
+    $("dashboard-income").textContent = formatRupiah(data.income);
+    $("dashboard-expenses").textContent = formatRupiah(data.expenses);
+    $("dashboard-month-label").textContent = new Date().toLocaleDateString("en", { month: "long", year: "numeric" });
+    $("dashboard-month-income").textContent = formatRupiah(data.monthlyIncome);
+    $("dashboard-month-expenses").textContent = formatRupiah(data.monthlyExpenses);
+    $("dashboard-month-remaining").textContent = formatRupiah(data.remaining);
+    $("dashboard-goals").innerHTML = state.goals.length
+        ? `<p class="goal-numbers">${formatRupiah(data.saved)} saved of ${formatRupiah(data.target)}</p>
+           <div class="meter-bar" role="progressbar" aria-label="Overall saving progress" aria-valuenow="${data.progress}" aria-valuemin="0" aria-valuemax="100"><span style="width:${data.progress}%"></span></div>
+           <p class="dashboard-note">${data.progress}% of your combined targets · ${state.goals.length} ${state.goals.length === 1 ? "goal" : "goals"}</p>`
+        : '<p class="empty">No saving goals yet. Create a goal below to track your progress.</p>';
+    $("dashboard-categories").innerHTML = data.categories.length
+        ? data.categories.map(([category, amount]) => {
+            const percent = Math.round(Number(BigInt(amount) * 10000n / data.expenses) / 100);
+            return `<li><div class="dashboard-row"><span>${escapeHtml(category)}</span><strong>${formatRupiah(amount)} · ${percent}%</strong></div>
+                <div class="meter-bar" aria-hidden="true"><span style="width:${percent}%"></span></div></li>`;
+        }).join("") : '<li class="empty">No expenses yet. Your category breakdown will appear here.</li>';
+    $("dashboard-recent").innerHTML = data.recent.length
+        ? data.recent.map(item => `<li class="dashboard-row"><div><strong>${escapeHtml(item.name)}</strong>
+            <p class="dashboard-note">${item.type} · ${escapeHtml(item.category)} · ${escapeHtml(toDateInputValue(item.date))}</p></div>
+            <strong class="dashboard-${item.type.toLowerCase()}">${item.type === "Income" ? "+" : "−"}${formatRupiah(item.amount)}</strong></li>`).join("")
+        : '<li class="empty">No transactions yet. Add income or an expense below to get started.</li>';
+    const comparison = data.monthlyIncome === 0 && data.monthlyExpenses === 0
+        ? "No recorded income or expenses this month."
+        : data.remaining >= 0
+            ? `This month's recorded income covers expenses with ${formatRupiah(data.remaining)} remaining before savings transfers.`
+            : `This month's expenses exceed recorded income by ${formatRupiah(-data.remaining)}.`;
+    $("dashboard-insight").textContent = data.highestExpense
+        ? `${data.categories[0][0]} is your largest all-time spending category (${formatRupiah(data.categories[0][1])}). Your highest expense is ${data.highestExpense.name} (${formatRupiah(data.highestExpense.amount)}). ${comparison}`
+        : `Add an expense to see spending insights. ${comparison}`;
 }
 
 function renderBalance() {

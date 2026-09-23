@@ -33,6 +33,45 @@
 
         <main class="layout">
 
+            <section class="dashboard" aria-labelledby="dashboard-heading">
+                <div class="card-head"><h1 id="dashboard-heading">Dashboard</h1><span class="count">Overview</span></div>
+                <p class="dashboard-note">All-time recorded activity. Your available balance also reflects savings and any preserved historical balance.</p>
+                <dl class="dashboard-metrics">
+                    <div class="card"><dt>Available balance</dt><dd id="dashboard-balance">Rp 0</dd></div>
+                    <div class="card"><dt>Total recorded income</dt><dd id="dashboard-income">Rp 0</dd></div>
+                    <div class="card"><dt>Total expenses</dt><dd id="dashboard-expenses">Rp 0</dd></div>
+                </dl>
+                <div class="dashboard-panels">
+                    <section class="card" aria-labelledby="dashboard-month-heading">
+                        <h2 id="dashboard-month-heading">Monthly overview</h2>
+                        <p class="dashboard-note" id="dashboard-month-label"></p>
+                        <dl class="summary-grid">
+                            <div><dt>Money in</dt><dd id="dashboard-month-income">Rp 0</dd></div>
+                            <div><dt>Spent</dt><dd id="dashboard-month-expenses">Rp 0</dd></div>
+                            <div><dt>Income minus expenses</dt><dd id="dashboard-month-remaining">Rp 0</dd></div>
+                        </dl>
+                    </section>
+                    <section class="card" aria-labelledby="dashboard-goals-heading">
+                        <h2 id="dashboard-goals-heading">Saving goals</h2>
+                        <div id="dashboard-goals"></div>
+                    </section>
+                    <section class="card" aria-labelledby="dashboard-category-heading">
+                        <h2 id="dashboard-category-heading">Spending by category</h2>
+                        <p class="dashboard-note">All-time expenses</p>
+                        <ul class="dashboard-list" id="dashboard-categories"></ul>
+                    </section>
+                    <section class="card" aria-labelledby="dashboard-recent-heading">
+                        <h2 id="dashboard-recent-heading">Recent transactions</h2>
+                        <p class="dashboard-note">Latest five by transaction date</p>
+                        <ul class="dashboard-list" id="dashboard-recent"></ul>
+                    </section>
+                </div>
+                <section class="card dashboard-insight" aria-labelledby="dashboard-insight-heading">
+                    <h2 id="dashboard-insight-heading">At a glance</h2>
+                    <p id="dashboard-insight"></p>
+                </section>
+            </section>
+
             <!-- ============ BALANCE (HERO) ============ -->
 
             <section class="card card-balance area-balance" aria-labelledby="balance-heading">
