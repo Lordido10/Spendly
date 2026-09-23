@@ -1,0 +1,79 @@
+/* Spendly's existing visual language, scoped to this separate dashboard demo. */
+:root {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: #1d2635;
+  background: #eef1f5;
+  --ink: #16202e;
+  --muted: #6c7787;
+  --line: #e3e7ec;
+  --accent: #1f7a5c;
+  --danger: #b3423c;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+h1, h2, p, dl, dd { margin: 0; }
+button { font: inherit; }
+.app { max-width: 640px; margin: 0 auto; padding: 24px 16px 64px; }
+.app-header { margin-bottom: 24px; }
+.app-name { font-size: 1.5rem; font-weight: 700; letter-spacing: -.02em; color: var(--ink); }
+.app-tagline { color: var(--muted); font-size: .875rem; }
+.demo-banner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding: 16px; margin-top: 20px; border: 1px solid var(--line); background: white; border-radius: 12px; }
+.demo-banner p { font-size: .8125rem; line-height: 1.6; margin-top: 4px; }
+.demo-banner > div { flex: 1 1 240px; }
+.btn { min-height: 44px; padding: 10px 16px; border: 0; border-radius: 8px; font-weight: 550; cursor: pointer; }
+.btn-accent { background: var(--accent); color: white; }
+.btn-accent:hover { background: #185f48; }
+button:focus-visible { outline: 3px solid var(--ink); outline-offset: 4px; }
+.transaction-filter { display: grid; gap: 8px; margin: 16px 0; }
+.transaction-filter label { font-size: .875rem; font-weight: 550; }
+.transaction-filter select { width: 100%; min-width: 0; min-height: 44px; padding: 8px 12px; font: inherit; color: inherit; background: white; border: 1px solid var(--line); border-radius: 8px; }
+.transaction-filter select:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.card { background: white; border: 1px solid var(--line); border-radius: 12px; padding: 20px; min-width: 0; }
+.card-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; }
+.count { font-size: .8125rem; color: var(--muted); border-radius: 999px; padding: 2px 10px; }
+.dashboard h1 { font-size: 1.5rem; }
+.dashboard h2 { font-size: 1rem; }
+.dashboard-note { color: var(--muted); font-size: .8125rem; margin: 8px 0 16px; line-height: 1.5; }
+.dashboard-metrics, .dashboard-panels { display: grid; gap: 16px; margin: 16px 0; }
+.dashboard-metrics dt { color: var(--muted); font-size: .8125rem; }
+.dashboard-metrics dd { font-size: 1.4rem; font-weight: 700; margin-top: 8px; overflow-wrap: anywhere; }
+.summary-balance { background: var(--ink); color: white; }
+.summary-balance dt { color: #d0d8e2; }
+.summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.summary-grid > div { background: #eef1f5; border-radius: 8px; padding: 12px; }
+.summary-grid dt { font-size: .75rem; color: var(--muted); }
+.summary-grid dd { font-size: 1rem; font-weight: 650; margin-top: 8px; overflow-wrap: anywhere; }
+.goal-numbers { color: var(--muted); font-size: .8125rem; margin: 8px 0 12px; overflow-wrap: anywhere; }
+.meter-bar { height: 8px; background: #eef1f5; border-radius: 999px; overflow: hidden; }
+.meter-bar span { display: block; height: 100%; background: var(--accent); border-radius: inherit; }
+.dashboard-list { list-style: none; padding: 0; margin: 0; }
+.dashboard-list li { padding: 12px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.dashboard-list li:last-child { border-bottom: 0; }
+.dashboard-row { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: .875rem; }
+.dashboard-row > * { min-width: 0; }
+.dashboard-row .dashboard-note { margin: 4px 0 0; }
+.dashboard-list .meter-bar { margin-top: 8px; }
+.dashboard-income { color: var(--accent); }
+.dashboard-expense { color: var(--danger); }
+.dashboard-insight p { margin-top: 12px; line-height: 1.65; overflow-wrap: anywhere; }
+.empty { color: var(--muted); padding: 24px 0; font-size: .875rem; line-height: 1.6; }
+.form-practice { margin-top: 24px; }
+.form-practice + .dashboard { margin-top: 24px; }
+.transaction-actions { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
+.edit-link { display: inline-flex; align-items: center; background: var(--accent); color: white; text-decoration: none; }
+.edit-link:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+.form-practice h2 { font-size: 1.15rem; }
+.form-practice h3 { font-size: 1rem; margin-top: 24px; }
+.transaction-form { display: grid; gap: 10px; }
+.transaction-form label { font-size: .875rem; font-weight: 550; }
+.transaction-form input, .transaction-form select { width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; font: inherit; color: inherit; background: white; border: 1px solid var(--line); border-radius: 8px; }
+.transaction-form input:focus-visible, .transaction-form select:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.transaction-form p { font-size: .875rem; overflow-wrap: anywhere; }
+.form-error { color: var(--danger); }
+@media (min-width: 600px) {
+  .app { padding: 32px 24px 80px; }
+  .card { padding: 24px; }
+  .dashboard-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .dashboard-panels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 900px) { .app { max-width: 960px; } }
